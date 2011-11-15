@@ -13,7 +13,7 @@
  * @author		Edmundas Kondrašovas <as@edmundask.lt>
  * @license		http://www.opensource.org/licenses/MIT
  * @copyright	Copyright (c) 2011 Edmundas Kondrašovas <as@edmundask.lt>
- * @version		0.5
+ * @version		0.6
  *
  */
 
@@ -23,8 +23,8 @@
  	const Q_XML		= "\x78\x6D\x6C";
  	const Q_JSON	= "\x6A\x73\x6F\x6E";
 
- 	private $users = array();		// Not in use yet
- 	private $channels = array();	// Not in use yet
+ 	private $users = array();
+ 	private $channels = array();
 
  	private $socket;
 
@@ -36,6 +36,7 @@
  	private $response;
 
  	private $status;
+ 	private $raw;
  	private $online = false;
 
  	/**
@@ -122,16 +123,17 @@
 	* Get server status
 	*
 	* @access	public
-	* @return	string		json/xml
+	* @param	boolean		return raw response
+	* @return	mixed		json/xml if set to return raw response or array otherwise
 	*/
 
- 	public function get_status()
+ 	public function get_status($raw = false)
  	{
- 		return $this->status;
+ 		return ($raw) ? $this->raw : $this->status;
  	}
 
  	/**
-	* Get players
+	* Get users
 	*
 	* @access	public
 	* @return	array
@@ -139,7 +141,19 @@
 
  	public function get_users()
  	{
- 		// Work in progress...
+ 		return $this->users;
+ 	}
+
+ 	/**
+	* Get channels
+	*
+	* @access	public
+	* @return	array
+	*/
+
+ 	public function get_channels()
+ 	{
+ 		return $this->channels;
  	}
 
  	/**
@@ -201,7 +215,7 @@
 
 		if($this->socket)
 		{
-			fwrite($this->socket, $data);
+			@fwrite($this->socket, $data);
 			stream_set_timeout($this->socket, 0, $this->timeout * 1000);
 		}
 	}
@@ -220,7 +234,8 @@
 			while($resp = @fread($this->socket, 1024)) $this->response .= $resp;
 			stream_set_timeout($this->socket, 0, $this->timeout * 1000);
 
-			$this->status = $this->response;
+			$this->raw = $this->response;
+			$this->status = $this->parse_response($this->response, $this->format);
 		}
 	}
 
@@ -238,6 +253,127 @@
 		$this->response = NULL;
 		$this->data = NULL;
 		$this->socket = NULL;
+	}
+
+	/**
+	* Parse data returned from the server
+	*
+	* @access	public
+	* @param	string	xml/json
+	* @param	string	format
+	* @return	array	parsed data
+	*/
+	
+	public function parse_response($data, $format = 'json')
+	{
+		switch($format)
+		{
+			case 'json':
+				$parsed_data = $this->_parse_json($data);
+			break;
+
+			case 'xml':
+				$parsed_data = $this->_parse_xml($data);
+			break;
+
+			default:
+				$parsed_data = $this->_parse_json($data);
+			break;
+		}
+
+		return $parsed_data;
+	}
+
+ 	/**
+	* Parse JSON
+	*
+	* @access	private
+	* @param	string	json
+	* @return	array	parsed data
+	*/
+
+	private function _parse_json($data)
+	{
+		$parsed_data = array();
+		$decoded = json_decode($data, true);
+
+		$this->_parse_channels($decoded);
+
+		$parsed_data['channels'] = $this->channels;
+		$parsed_data['users'] = $this->users;
+		$parsed_data['original'] = $decoded;
+
+		return $parsed_data;
+	}
+
+ 	/**
+	* Parse XML
+	*
+	* @access	private
+	* @param	string	xml
+	* @return	array	parsed data
+	*/
+
+	// Does not work properly yet.
+	private function _parse_xml($data)
+	{
+		$parsed_data = array();
+		$decoded = simplexml_load_string($data);
+
+		$this->_parse_channels($decoded);
+
+		$parsed_data['channels'] = $this->channels;
+		$parsed_data['users'] = $this->users;
+		$parsed_data['original'] = $decoded;
+
+		return $parsed_data;
+	}
+
+ 	/**
+	* Parse the channels
+	*
+	* @access	private
+	* @param	array		channels
+	* @return	void
+	*/
+
+	private function _parse_channels($channels)
+	{
+		// We'll have to deal with the root channel separately
+		if(array_key_exists('root', $channels))
+		{
+			if(count($channels['root']['users']) > 0)
+			{
+				foreach($channels['root']['users'] as $user) $this->users[] = $user;
+			}
+
+			$tmp = $channels['root']['channels'];
+
+			unset($channels['root']['users']);
+			unset($channels['root']['channels']);
+
+			$this->_parse_channels($tmp);
+		}
+		else
+		{
+			if(count($channels) > 0)
+			{
+				foreach($channels as $channel)
+				{
+					if(count($channel['users']) > 0)
+					{
+						foreach($channel['users'] as $user) $this->users[] = $user;
+					}
+
+					unset($channel['users']);
+
+					$this->_parse_channels($channel['channels']);
+
+					unset($channel['channels']);
+					$this->channels[] = $channel;
+				}
+			}
+		}
 	}
  }
 
