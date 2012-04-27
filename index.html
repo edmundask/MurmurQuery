@@ -1,0 +1,191 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="chrome=1">
+    <title>Murmurquery by edmundask</title>
+    <link rel="stylesheet" href="stylesheets/styles.css">
+    <link rel="stylesheet" href="stylesheets/pygment_trac.css">
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.7.1/jquery.min.js"></script>
+    <script src="javascripts/respond.js"></script>
+    <!--[if lt IE 9]>
+      <script src="//html5shiv.googlecode.com/svn/trunk/html5.js"></script>
+    <![endif]-->
+    <!--[if lt IE 8]>
+    <link rel="stylesheet" href="stylesheets/ie.css">
+    <![endif]-->
+    <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
+
+  </head>
+  <body>
+
+      <div id="header">
+        <nav>
+          <li class="fork"><a href="https://github.com/edmundask/MurmurQuery">Fork On GitHub</a></li>
+          <li class="downloads"><a href="https://github.com/edmundask/MurmurQuery/zipball/master">ZIP</a></li>
+          <li class="downloads"><a href="https://github.com/edmundask/MurmurQuery/tarball/master">TAR</a></li>
+          <li class="title">DOWNLOADS</li>
+        </nav>
+      </div><!-- end header -->
+
+    <div class="wrapper">
+
+      <section>
+        <div id="title">
+          <h1>Murmurquery</h1>
+          <p>MurmurQuery is a PHP class based on GT Murmur Plugin &amp; used for querying Murmur servers.</p>
+          <hr>
+          <span class="credits left">Project maintained by <a href="https://github.com/edmundask">edmundask</a></span>
+          <span class="credits right">Hosted on GitHub Pages &mdash; Theme by <a href="http://twitter.com/#!/michigangraham">mattgraham</a></span>
+        </div>
+
+        <h1>MurmurQuery</h1>
+
+<p>MurmurQuery is a PHP class used for querying Murmur servers. It is based on <a href="http://www.gametracker.com/downloads/gtmurmurplugin.php">GT Murmur Plugin</a>, which allows us to query a Murmur server 
+without having to install PHP ICE on the web server.</p>
+
+<p>The response is constructed using <a href="http://mumble.sourceforge.net/Channel_Viewer_Protocol">Channel Viewer Protocol</a>.</p>
+
+<h1>Requirements</h1>
+
+<ul>
+<li>PHP 5</li>
+<li>
+<a href="http://mumble.sourceforge.net/">Murmur/Mumble</a> 1.2.x+ installed on the server</li>
+<li>
+<a href="http://www.gametracker.com/downloads/gtmurmurplugin.php">GT Murmur Plugin</a> installed on the same server on which Murmur is running</li>
+</ul><h1>Usage</h1>
+
+<p>You can check the index.php file which comes with this package to see how to use this library.</p>
+
+<h2>Setup</h2>
+
+<p>First you need to include the library in your PHP scripts where you're going to use it.</p>
+
+<p><code>require_once('classes/MurmurQuery.php');</code></p>
+
+<p>Then you need to set the configuration. You have two ways of doing it:</p>
+
+<ul>
+<li>a) Pass in the parameters to the constructor.</li>
+<li>b) Call the <code>setup()</code> and pass in the values to it.</li>
+</ul><p>a) Create new instance and set the values:</p>
+
+<p><code>$murmur = new MurmurQuery($host, $port, $timeout, $format)</code></p>
+
+<p>b) Set settings array, create new MurmurQuery instance without parameters and then call the setup() method:</p>
+
+<pre><code>// Set the parameters
+$settings       =   array
+(
+    'host'      =&gt;  '127.0.0.1',
+    'port'      =&gt;  27800,
+    'timeout'   =&gt;  200,
+    'format'    =&gt;  'json'
+);
+
+// Create new instance
+$murmur = new MurmurQuery();
+
+// Load in the settings
+$murmur-&gt;setup($settings);
+</code></pre>
+
+<p>Note: when calling the setup() method, you can also set the values separately:</p>
+
+<p><code>$murmur-&gt;setup('127.0.0.1', 27800, 200, 'json');</code></p>
+
+<h3>Optional parameters</h3>
+
+<p>Not all parameters are necessary. To query a murmur server you only need the host if the server uses default settings. Otherwise you may need to set the port too. Timeout and format parameters are completely optional.</p>
+
+<h2>Querying The Server</h2>
+
+<p>Querying the server is as easy as calling the query() method:</p>
+
+<p><code>$murmur-&gt;query();</code></p>
+
+<h2>Handling the response</h2>
+
+<p>As soon as you query the server, you have the ability to check the server's status, get full response data etc.</p>
+
+<h3>Server Online Status</h3>
+
+<pre><code>if($murmur-&gt;is_online())
+{
+    echo 'Server is online!';
+}
+else
+{
+    echo 'Server is offline.';
+}
+</code></pre>
+
+<h3>Respnse Data</h3>
+
+<p><code>$response = $mumur-&gt;get_status();</code></p>
+
+<p>This will return three pieces of information: the users, the channels and original response data.</p>
+
+<pre><code>print_r($response['channels']);
+print_r($response['users']);
+print_r($response['original']);
+</code></pre>
+
+<p>By default the library parses the returned JSON/XML data to an array and pushes extra values (channels and users). However, you can get the raw response by setting raw parameter to <code>true</code>:</p>
+
+<p><code>$raw_response = $murmur-&gt;get_status(true);</code></p>
+
+<p>Keep in mind you'll have to parse the data yourself. For example, if you're using json as the preferred format:</p>
+
+<pre><code>$raw_response = $murmur-&gt;get_status(true);
+$data = json_decode($raw_response, true);
+</code></pre>
+
+<h3>Channels</h3>
+
+<p>To get the list of available channels:</p>
+
+<p><code>$channels = $murmur-&gt;get_channels();</code></p>
+
+<h3>Users</h3>
+
+<p>To get the list of all online users:</p>
+
+<p><code>$users = $murmur-&gt;get_users();</code></p>
+
+<h1>CHANGELOG</h1>
+
+<h2>0.6</h2>
+
+<ul>
+<li>get_response() method now returns already parsed data. However, you can set get_response(true) to get the raw response.</li>
+<li>Added support for getting the channels and users lists separately with get_channels() and get_users() respectively.</li>
+</ul><h1>COPYRIGHT</h1>
+
+<p>Copyright (c) 2011 Edmundas Kondrašovas</p>
+
+<p>Permission is hereby granted, free of charge, to any person obtaining a copy 
+of this software and associated documentation files (the "Software"), to deal 
+in the Software without restriction, including without limitation the rights 
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell 
+copies of the Software, and to permit persons to whom the Software is 
+furnished to do so, subject to the following conditions:</p>
+
+<p>The above copyright notice and this permission notice shall be included in 
+all copies or substantial portions of the Software.</p>
+
+<p>THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR 
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, 
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE 
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER 
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, 
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN 
+THE SOFTWARE.</p>
+      </section>
+
+    </div>
+    <!--[if !IE]><script>fixScale(document);</script><!--<![endif]-->
+    
+  </body>
+</html>
